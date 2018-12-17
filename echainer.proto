@@ -1,0 +1,74 @@
+syntax = "proto3";
+package echainer;
+
+service Echainer {
+  // rpc Ping (PingRequest) returns (PingResponse) {}
+  rpc AssignRank(AssignRankRequest) returns (AssignRankResponse) {}
+  rpc SendBlock(SendBlockRequest) returns (SendBlockResponse) {}
+  rpc FetchState(FetchStateRequest) returns (FetchStateResponse) {}
+}
+
+message AssignRankRequest {
+  uint64 gen = 1;      // generation
+  uint64 lease_id = 2; // master's lease id, unique id to know generation
+  uint32 rank = 3; // rank of receiver
+  uint32 size = 4;
+  uint32 intra_rank = 5;
+  uint32 intra_size = 6;
+  bytes signature = 7; // signature of the master era
+  bool initial = 8;
+  // TODO: do we need master's host information? could be just sender info
+}
+message AssignRankResponse {
+  bool accept = 1;
+  bytes signature = 2;
+}
+
+message SendBlockRequest {
+  bytes signature = 1; // signature of the master era
+  uint32 to = 2;
+  uint32 from = 3;
+  uint64 msgid = 4;
+  bytes block = 5;
+   // TODO: we need send/recv chunk number counter
+}
+message SendBlockResponse {
+  bytes signature = 1; // signature of the master era
+}
+
+message FetchStateRequest {
+  bytes signature = 1; // signature of the master era
+  uint32 to = 2;
+  uint32 from = 3;
+  uint64 offset = 4;
+  bytes name = 5;
+}
+message FetchStateResponse {
+  bytes signature = 1; // signature of the master era
+  uint32 iteration = 2;
+  uint32 epoch = 3;
+  bytes state = 4; // Serialized state
+  uint64 total = 5;
+}
+
+message LineageEntry {
+  message Metric {
+    uint32 iteration = 1;
+    uint32 epoch = 2;
+    float elasped_time = 3;
+    float loss = 4;
+    float validation_loss = 5;
+    float accuracy = 6;
+    float validation_accuracy = 7;
+    bytes host = 8;
+    uint32 rank = 9;
+  }
+  message Event {
+    float elasped_time = 1;
+    bytes event = 2;
+    bytes host = 3;
+    uint32 rank = 4;
+  }
+  repeated Metric metrics = 1;
+  repeated Event events = 2;
+}
