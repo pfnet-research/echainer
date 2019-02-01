@@ -53,8 +53,17 @@ class CommunicatorResource(six.with_metaclass(ABCMeta)):
 
     @abstractmethod
     def destroy(self):
-        '''Do user-land destruction. Will be called concurrently, different
-        thread from main. e.g. call nccl_comm.destroy().
+        '''Do user-land graceful destruction of the resource. Will be called
+        concurrently, different thread from main. e.g. call
+        nccl_comm.destroy().
+
+        '''
+        raise NotImplementedError()
+
+    @abstractmethod
+    def abort(self):
+        '''Do user-land non-graceful destruction. Will be called concurrently,
+        different thread from main. e.g. call nccl_comm.abort().
 
         '''
         raise NotImplementedError()
@@ -86,9 +95,10 @@ class MetaCommunicator(chainermn.CommunicatorBase):
 
         self.monitor = ticker.SelfMonitor()
 
-        # TODO: let it destroy once membership requests destruction
-        self.destroyer_thread = threading.Thread(target=self.destroyer)
-        self.destroyer_thread.start()
+        # TODO: let it destroy once membership requests abort
+        self.run_killer = True
+        self.killer_thread = threading.Thread(target=self.killer)
+        self.killer_thread.start()
 
         self.registered_state = {}
         while not self.do_construct({}):
@@ -103,16 +113,15 @@ class MetaCommunicator(chainermn.CommunicatorBase):
     def get_monitor(self):
         return self.monitor
 
-    def destroyer(self):
-        self.run_destroyer = True
-        while self.run_destroyer:
-            destroy_done = self.membership.maybe_destroy()
-            if destroy_done:
+    def killer(self):
+        while self.run_killer:
+            should_abort = self.membership.should_abort()
+            if should_abort:
                 for resource in self.resources:
                     try:
-                        resource.destroy()
+                        resource.abort()
                     except Exception as e:
-                        print("Failed to destroy resource @%s :" % self.bind, e)
+                        print("Failed to abort resource @%s :" % self.bind, e)
             #if not self.monitor.is_alive():
             #    # TODO: exit gracefully
             #    print('monitor: false. Exiting')
@@ -120,11 +129,19 @@ class MetaCommunicator(chainermn.CommunicatorBase):
             time.sleep(1) # TODO: use mutex and condition variable
 
     def leave(self):
+        '''
+        All usage of resources should be stopped before this
+        '''
         # print('leaving')
+        self.run_killer = False
+        self.killer_thread.join()
         self.membership.leave()
-        self.run_destroyer = False
-        self.destroyer_thread.join()
-        print('left the cluster')
+        for resource in self.resources:
+            try:
+                resource.destroy()
+            except Exception as e:
+                print("Failed to abort resource @%s :" % self.bind, e)
+        print('left the cluster gracefully')
 
     def register_state(self, name, obj):
         self.registered_state[name] = obj

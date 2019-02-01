@@ -42,8 +42,8 @@ PYBIND11_MODULE(echainer_internal, m) {
     .def("rendezvous", &echainer::Membership::RendezVous, "Do rendez-vous over etcd/path")
     .def("maybe_update_cluster", &echainer::Membership::MaybeUpdateCluster,
          "Maybe update cluster state by checking gaps")
-    .def("maybe_destroy", &echainer::Membership::MaybeDestroy,
-         "If needed, destroys via policy")
+    .def("should_abort", &echainer::Membership::ShouldAbort,
+         "Should be aborted or not")
     .def("fetch_state", &echainer::Membership::FetchState,
          "Fetch remote status for catch up")
     .def("register_state", &echainer::Membership::RegisterState,

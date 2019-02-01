@@ -30,7 +30,7 @@ namespace echainer {
     bool RendezVous();
     void SetPolicy(py::object& policy);
     bool MaybeUpdateCluster();
-    bool MaybeDestroy();
+    bool ShouldAbort();
 
     bool Put(const std::string&, py::buffer);
     py::bytes Get(const std::string&);

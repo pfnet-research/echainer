@@ -189,7 +189,7 @@ namespace echainer {
   }
 
   // Should be called in different thread than main one... hopefully?
-  bool Membership::MaybeDestroy() {
+  bool Membership::ShouldAbort() {
     unsigned int remote_generation = failure_detector_->GetGen();
     //LOG(INFO) << "MaybeDestroy:" << remote_generation << " <> " << generation_
     //	      << "  constructed_=" << constructed_;

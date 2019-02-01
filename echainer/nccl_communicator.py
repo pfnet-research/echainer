@@ -11,10 +11,13 @@ class NcclResource(CommunicatorResource):
     def __init__(self):
         super(NcclResource, self).__init__()
         self.nccl_comm = None
+        from cupy.cuda import nccl
+        print("NCCL Version:", nccl.get_version())
+        if nccl.get_version() < 2400:
+	    raise ValueError("NCCL must be later than 2.4")
 
     def make_sesame(self, intra_rank):
         print('Using GPU No.', intra_rank, " @to get unique id")
-        from cupy.cuda import nccl
         chainer.cuda.get_device_from_id(intra_rank).use()
         uid = nccl.get_unique_id()
         return json.dumps(uid)
@@ -29,6 +32,11 @@ class NcclResource(CommunicatorResource):
     def destroy(self):
         if hasattr(self, 'nccl_comm') and self.nccl_comm is not None:
             self.nccl_comm.destroy()
+            self.nccl_comm = None
+
+    def abort(self):
+        if hasattr(self, 'nccl_comm') and self.nccl_comm is not None:
+            self.nccl_comm.abort()
             self.nccl_comm = None
 
 
